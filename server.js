@@ -33,61 +33,40 @@ app.get("/", (req, res) => {
   `);
 });
 
-
 app.post("/create-checkout-session", async (req, res) => {
   try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+    // 1️⃣ Create an upfront one-time checkout for $2,997 AUD
+    const upfrontSession = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
             currency: "aud",
             product_data: {
-              name: "Video Marketing Machine",
-              description: "Join the Video Marketing Machine Case Study Program: $2,997 today, then $997/month starting after 90 days.",
+              name: "Video Marketing Machine - Initial Access",
+              description: "Immediate access for 90 days. Subscription starts later.",
             },
-            unit_amount: 99700, // $997 AUD (monthly)
-            recurring: { interval: "month" },
+            unit_amount: 299700, // $2,997 AUD
           },
           quantity: 1,
         },
       ],
-      subscription_data: {
-        trial_period_days: 90, // wait 90 days before first recurring payment
-      },
-      allow_promotion_codes: true,
-      metadata: {
-        offer: "VMM Case Study Program",
-      },
-      mode: "subscription",
-      customer_creation: "always",
-      payment_intent_data: {
-        setup_future_usage: "off_session",
-      },
-      // create an upfront payment
-      custom_text: {
-        submit: {
-          message: "You’ll be charged $2,997 AUD today. Then $997/month starts after 90 days.",
-        },
-      },
+      mode: "payment",
       success_url: `${req.headers.origin}/success.html`,
       cancel_url: `${req.headers.origin}/cancel.html`,
+      metadata: {
+        next_phase: "subscription_start",
+      },
     });
 
-    // charge $2,997 AUD upfront immediately
-    const upfrontPayment = await stripe.paymentIntents.create({
-      amount: 299700,
-      currency: "aud",
-      description: "Video Marketing Machine - Initial 90-Day Access",
-    });
-
-    res.json({ url: session.url });
+    // 2️⃣ Return the checkout URL to the front end
+    res.json({ url: upfrontSession.url });
   } catch (err) {
-    console.error(err);
+    console.error("Stripe error:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 const PORT = process.env.PORT || 3000;
