@@ -7,6 +7,22 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 app.use(express.static("public"));
 app.use(express.json());
 
+// ✅ This route helps test that the server works
+app.get("/", (req, res) => {
+  res.send(`
+    <h1>Video Marketing Machine Checkout</h1>
+    <button onclick="checkout()">Join Now – $2,997 AUD</button>
+    <script>
+      async function checkout() {
+        const res = await fetch('/create-checkout-session', { method: 'POST' });
+        const data = await res.json();
+        window.location = data.url;
+      }
+    </script>
+  `);
+});
+
+
 app.post("/create-checkout-session", async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.create({
